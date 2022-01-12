@@ -11,7 +11,6 @@ Future<void> handleBackgroundMessage(message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  LocalNotificationService.initialize();
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
   runApp(const MyApp());
@@ -41,11 +40,14 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final List<Message> _messages = [];
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
   Future<void> setupInteractedMessage() async {
     // Get any messages which caused the application to open from
     // a terminated state.
     RemoteMessage? initialMessage =
-        await FirebaseMessaging.instance.getInitialMessage();
+        await _firebaseMessaging.getInitialMessage();
 
     // If the message also contains a data property with a "route",
     // navigate to that route
@@ -55,10 +57,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     /// receive message in foreground only
     FirebaseMessaging.onMessage.listen((message) {
-      print(message.notification?.body);
-      print(message.notification?.title);
-
       LocalNotificationService.display(message);
+      _addMessage(message);
     });
 
     // Also handle any interaction when the app is in the background via a
@@ -67,30 +67,69 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _handleMessage(RemoteMessage message) {
+    _addMessage(message);
+
     Navigator.pushNamed(
       context,
       message.data['route'],
     );
   }
 
+  void _getDeviceToken() async {
+    String? token = await _firebaseMessaging.getToken();
+    print(token);
+  }
+
   @override
   void initState() {
     super.initState();
+    LocalNotificationService.initialize(context);
+
     setupInteractedMessage();
+    _getDeviceToken();
+  }
+
+  void _addMessage(RemoteMessage message) {
+    Message msg = Message(
+        title: message.notification?.title ?? "",
+        body: message.notification?.body ?? "",
+        message: message.data["message"]);
+    _messages.add(msg);
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return const SafeArea(
+    return SafeArea(
         child: Scaffold(
             body: Center(
-      child: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Text(
-          "You will receive a notification soon",
-          style: TextStyle(fontSize: 34),
-        ),
-      ),
+      child: _messages.isEmpty
+          ? const Text("No Notifications received")
+          : ListView.builder(
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                Message msg = _messages[index];
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        msg.title,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                );
+              }),
     )));
   }
+}
+
+class Message {
+  final String title;
+  final String body;
+  final String message;
+
+  Message({required this.title, required this.body, required this.message});
 }

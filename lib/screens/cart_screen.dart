@@ -6,10 +6,12 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SafeArea(
-      child:  Center(
-        child: Text(
-          "Cart page",
-          style: TextStyle(fontSize: 34),
+      child:  Scaffold(
+        body: Center(
+          child: Text(
+            "Cart page",
+            style: TextStyle(fontSize: 34),
+          ),
         ),
       ),
     );
