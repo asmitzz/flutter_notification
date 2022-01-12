@@ -20,7 +20,7 @@ class LocalNotificationService {
 
   static void display(RemoteMessage message) async {
     try {
-      int id = 544; // TODO: It should be unique
+      int id = DateTime.now().millisecondsSinceEpoch~/10000;
       const NotificationDetails notificationDetails = NotificationDetails(
           android: AndroidNotificationDetails("testing", "testing channel",
               channelDescription: "This is our channel",
