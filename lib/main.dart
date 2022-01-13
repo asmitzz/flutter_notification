@@ -3,16 +3,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_notification/screens/cart_screen.dart';
 import 'package:flutter_notification/screens/wishlist_screen.dart';
+import 'package:flutter_notification/services/firebase_messaging_service.dart';
 import 'package:flutter_notification/services/local_notification_service.dart';
 
-Future<void> handleBackgroundMessage(message) async {
-  print("received message");
-}
+Future<void> handleBackgroundNotification(message) async {}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(handleBackgroundMessage);
+  FirebaseMessaging.onBackgroundMessage(handleBackgroundNotification);
   runApp(const MyApp());
 }
 
@@ -41,30 +40,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final List<Message> _messages = [];
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-
-  Future<void> setupInteractedMessage() async {
-    // Get any messages which caused the application to open from
-    // a terminated state.
-    RemoteMessage? initialMessage =
-        await _firebaseMessaging.getInitialMessage();
-
-    // If the message also contains a data property with a "route",
-    // navigate to that route
-    if (initialMessage != null) {
-      _handleMessage(initialMessage);
-    }
-
-    /// receive message in foreground only
-    FirebaseMessaging.onMessage.listen((message) {
-      LocalNotificationService.display(message);
-      _addMessage(message);
-    });
-
-    // Also handle any interaction when the app is in the background via a
-    // Stream listener
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
-  }
 
   void _handleMessage(RemoteMessage message) {
     _addMessage(message);
@@ -75,18 +50,26 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _getDeviceToken() async {
-    String? token = await _firebaseMessaging.getToken();
-    print(token);
-  }
-
   @override
   void initState() {
     super.initState();
     LocalNotificationService.initialize(context);
 
-    setupInteractedMessage();
-    _getDeviceToken();
+    FirebaseMessagingService(
+      handleInitialMessage: (initialMessage) => _handleMessage(initialMessage),
+      onMessage: (message) {
+        LocalNotificationService.display(message);
+        _addMessage(message);
+      },
+      onMessageOpenedApp: (message) => _handleMessage(message),
+    ).init();
+
+    getDeviceToken() async {
+      String? token = await FirebaseMessagingService.getDeviceToken();
+      print(token);
+    }
+
+    getDeviceToken();
   }
 
   void _addMessage(RemoteMessage message) {
